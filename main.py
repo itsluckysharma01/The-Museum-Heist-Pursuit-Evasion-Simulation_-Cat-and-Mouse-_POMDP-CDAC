@@ -1,50 +1,69 @@
-import time
-
-from env.grid import GridWorld
+import pygame
+from env.grid_world import GridWorld
 from env.sensors import MotionSensor
-
-from pomdp.belief import Belief
-
-from agents.guard import Guard
-from agents.intruder import Intruder
-
+from pomdp.belief_update import Belief
 from visualization.viewer import Viewer
 
-
-env=GridWorld()
-
-sensor=MotionSensor()
-
-belief=Belief(env.size)
-
-guard=Guard(belief)
-
-intruder=Intruder()
-
-viewer=Viewer(env.size)
+env = GridWorld()
+sensor = MotionSensor()
+belief = Belief(env.size)
+viewer = Viewer(env.size)
 
 env.reset()
+clock = pygame.time.Clock()
 
-for step in range(200):
+print("Guard  -> Arrow Keys")
+print("Intruder -> W A S D")
 
-    guard_action=guard.choose_action(env.guard)
+running = True
+while running:
+    guard_action = None
+    intruder_action = None
 
-    intruder_action=intruder.choose_action()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-    env.guard=env.move(env.guard,guard_action)
+        if event.type == pygame.KEYDOWN:
+            # Guard: Arrow keys
+            if event.key == pygame.K_UP:
+                guard_action = "UP"
+            elif event.key == pygame.K_DOWN:
+                guard_action = "DOWN"
+            elif event.key == pygame.K_LEFT:
+                guard_action = "LEFT"
+            elif event.key == pygame.K_RIGHT:
+                guard_action = "RIGHT"
 
-    env.intruder=env.move(env.intruder,intruder_action)
+            # Intruder: WASD
+            elif event.key == pygame.K_w:
+                intruder_action = "UP"
+            elif event.key == pygame.K_s:
+                intruder_action = "DOWN"
+            elif event.key == pygame.K_a:
+                intruder_action = "LEFT"
+            elif event.key == pygame.K_d:
+                intruder_action = "RIGHT"
 
-    observation=sensor.detect(env.guard,env.intruder)
+            elif event.key == pygame.K_ESCAPE:
+                running = False
 
-    belief.update(observation)
+    if guard_action:
+        env.guard = env.move(env.guard, guard_action)
 
-    viewer.draw(env,belief)
+    if intruder_action:
+        env.intruder = env.move(env.intruder, intruder_action)
 
-    if env.guard==env.intruder:
+    if guard_action or intruder_action:
+        observation = sensor.detect(env.guard, env.intruder)
+        belief.update(observation)
 
-        print("Guard caught intruder")
+    viewer.draw(env, belief)
 
-        break
+    if env.guard == env.intruder:
+        print("Guard caught the intruder!")
+        running = False
 
-    time.sleep(0.2)
+    clock.tick(60)
+
+pygame.quit()
